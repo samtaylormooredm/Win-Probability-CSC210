@@ -68,6 +68,13 @@ for file_path in file_paths:
 
     df.columns = [' '.join(col).strip() if isinstance(col, tuple) else col for col in df.columns.values]
 
+    # === FIX the two Opp columns ===
+    df = df.rename(columns={
+        'Tm': 'Points',
+        'Opp': 'Opp_Points',   # Points allowed
+        'Opp.1': 'Opp'    # Opponent name
+    })
+
     # Calculate the stats we need
     df['TOV%'] = df['TOV'] / (df['FGA'] + 0.44 * df['FTA'] + df['TOV'])
     df['ORB%'] = df['ORB'] / (df['ORB'] + df['DRB.1'])
@@ -78,22 +85,20 @@ for file_path in file_paths:
     df['Opp_FT%'] = df['FT.1'] / df['FGA.1']
 
     # Select and rename
-    selected_df = df[['Date', 'Rslt', 'Tm', 'Opp',
-                  'eFG%', 'TOV', 'TOV%', 'ORB', 'ORB%', 'FT%',
-                  'eFG%.1', 'TOV.1', 'Opp_TOV%', 'ORB.1', 'Opp_ORB%', 'Opp_FT%',
-                  'STL', 'STL.1', 'BLK', 'BLK.1',
-                  'FGA', 'FGA.1', 'FTA', 'FTA.1']] 
+    selected_df = df[['Date', 'Opp', 'Rslt', 'Points', 'Opp_Points',
+                      'eFG%', 'TOV', 'TOV%', 'ORB', 'ORB%', 'FT%',
+                      'eFG%.1', 'TOV.1', 'Opp_TOV%', 'ORB.1', 'Opp_ORB%', 'Opp_FT%',
+                      'STL', 'STL.1', 'BLK', 'BLK.1',
+                      'FGA', 'FGA.1', 'FTA', 'FTA.1']] 
 
     selected_df = selected_df.rename(columns={
-        'Tm': 'Points',
-        'Opp': 'Opp_Points',
         'eFG%.1': 'Opp_eFG%',
         'TOV.1': 'Opp_TOV',
         'ORB.1': 'Opp_ORB',
         'STL.1': 'Opp_STL',
         'BLK.1': 'Opp_BLK',
-        'FGA.1': 'Opp_FGA',   # <== Renaming FGA.1 → Opp_FGA
-        'FTA.1': 'Opp_FTA',   # <== Renaming FTA.1 → Opp_FTA
+        'FGA.1': 'Opp_FGA',
+        'FTA.1': 'Opp_FTA'
     })
 
     # Add file and season info
@@ -103,14 +108,15 @@ for file_path in file_paths:
 
     cleaned_dataframes.append(selected_df)
 
+
 # Combine all into one
 combined_df = pd.concat(cleaned_dataframes, ignore_index=True)
 
-team_columns = ['eFG%', 'TOV', 'TOV%', 'ORB', 'ORB%', 'FT%', 'STL', 'BLK', 'FGA', 'FTA']
+team_columns = ['eFG%','TOV', 'TOV%', 'ORB', 'ORB%', 'FT%', 'STL', 'BLK', 'FGA', 'FTA']
 opp_columns = ['Opp_Points', 'Opp_eFG%', 'Opp_TOV', 'Opp_TOV%', 'Opp_ORB', 'Opp_ORB%', 'Opp_FT%', 'Opp_STL', 'Opp_BLK', 'Opp_FGA', 'Opp_FTA']
 
-# Full final column order
-final_columns = ['Date', 'Season', 'Rslt', 'Points'] + team_columns + opp_columns + ['Source_File']
+# Full final column order (fixed to keep Opponent name)
+final_columns = ['Date', 'Season', 'Rslt', 'Points', 'Opp'] + team_columns + opp_columns + ['Source_File']
 combined_df = combined_df[final_columns]
 
 # Save
