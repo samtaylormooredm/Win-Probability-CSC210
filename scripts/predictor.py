@@ -57,13 +57,13 @@ def predict_game_winner(team1, team2, season, data):
 
     prob_team1 = (
         0.4 * (team1_stats['eFG%'] - team2_opp_stats['Opp_eFG%']) +
-        0.3 * (team1_stats['DRB%'] - team2_opp_stats['Opp_DRB%']) -
+        0.3 * (team1_stats['ORB%'] - team2_opp_stats['Opp_ORB%']) -
         0.2 * (team1_stats['TOV%'] - team2_opp_stats['Opp_TOV%']) +
         0.1 * (team1_stats['FT%'] - team2_opp_stats['Opp_FT%'])
     )
     prob_team2 = (
         0.4 * (team2_stats['eFG%'] - team1_opp_stats['Opp_eFG%']) +
-        0.3 * (team2_stats['DRB%'] - team1_opp_stats['Opp_DRB%']) -
+        0.3 * (team2_stats['ORB%'] - team1_opp_stats['Opp_ORB%']) -
         0.2 * (team2_stats['TOV%'] - team1_opp_stats['Opp_TOV%']) +
         0.1 * (team2_stats['FT%'] - team1_opp_stats['Opp_FT%'])
     )
