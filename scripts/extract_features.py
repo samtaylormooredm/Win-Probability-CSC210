@@ -59,61 +59,48 @@ file_paths = [
     "data_csv/2025/virginia-military-institute.csv"
 ]
 
-
-# Column mapping: maps your final output column names to the CSV header structure
-col_mapping = {
-    "Date": "Date",
-    "Opp": "Opp",
-    "Type": "Type",
-    "Rslt": "Rslt",
-    "Tm": "Tm",
-    "Opp_score": "Opp.1",
-    "eFG%": "eFG%",
-    "TOV%": "TOV",
-    "DRB%": "DRB",
-    "FT%": "FT%",  # optional
-    "Opp_eFG%": "eFG%.1",
-    "Opp_TOV%": "TOV.1",
-    "Opp_DRB%": "DRB.1",
-    "Opp_FT%": "FT%.1"
-}
-
-
-
-
 # List for storing cleaned DataFrames
 cleaned_dataframes = []
 
-
-# Loop through each CSV and process
 for file_path in file_paths:
     df = pd.read_csv(file_path, header=1)
-    # Drop the last row (season totals)
-    df = df.iloc[:-1]
-
-    print(df.columns.tolist())
+    df = df.iloc[:-1]  # Drop last row (season totals)
 
     df.columns = [' '.join(col).strip() if isinstance(col, tuple) else col for col in df.columns.values]
 
-    # Extract relevant columns and rename
-    selected_df = df[list(col_mapping.values())].rename(columns={v: k for k, v in col_mapping.items()})
-    selected_df["Source_File"] = os.path.basename(file_path)
+    # Calculate the stats we need
+    df['TOV%'] = df['TOV'] / (df['FGA'] + 0.44 * df['FTA'] + df['TOV'])
+    df['ORB%'] = df['ORB'] / (df['ORB'] + df['DRB.1'])
+    df['FT%'] = df['FT'] / df['FGA']
 
-     # Add season column
-    year = file_path.split("/")[1]  # e.g., '2024'
-    season = f"{int(year)-1}-{year}"  # e.g., '2023-2024'
-    selected_df["Season"] = season
+    df['Opp_TOV%'] = df['TOV.1'] / (df['FGA.1'] + 0.44 * df['FTA.1'] + df['TOV.1'])
+    df['Opp_ORB%'] = df['ORB.1'] / (df['ORB.1'] + df['DRB'])
+    df['Opp_FT%'] = df['FT.1'] / df['FGA.1']
+
+    # Select and rename
+    selected_df = df[['Date', 'Opp', 'eFG%', 'TOV%', 'ORB%', 'FT%',
+                      'eFG%.1', 'Opp_TOV%', 'Opp_ORB%', 'Opp_FT%']]
+    selected_df = selected_df.rename(columns={
+        'eFG%': 'eFG%',
+        'eFG%.1': 'Opp_eFG%'
+    })
+
+    # Add file and season info
+    selected_df['Source_File'] = os.path.basename(file_path)
+    year = file_path.split('/')[1]
+    selected_df['Season'] = f"{int(year)-1}-{year}"
 
     cleaned_dataframes.append(selected_df)
 
-# Combine everything into one DataFrame
+# Combine all into one
 combined_df = pd.concat(cleaned_dataframes, ignore_index=True)
 
-# Move "Season" to second column
+# Reorder columns
 cols = combined_df.columns.tolist()
-cols.insert(1, cols.pop(cols.index("Season")))
+cols.insert(1, cols.pop(cols.index('Season')))
 combined_df = combined_df[cols]
 
-# Save or preview
+# Save
+os.makedirs("outputs", exist_ok=True)
 combined_df.to_csv("outputs/cleaned_win_prob_data.csv", index=False)
 print("Cleaned data saved as 'cleaned_win_prob_data.csv'")

@@ -97,6 +97,11 @@ def run_gui():
         except Exception as e:
             messagebox.showerror("Prediction Error", str(e))
 
+    def reset_teams():
+        team1_combo.set('')
+        team2_combo.set('')
+        result_label.config(text='')
+
     root = tk.Tk()
     root.title("FCS Game Predictor")
 
@@ -117,8 +122,16 @@ def run_gui():
     team2_combo = ttk.Combobox(root, values=TEAM_LIST, width=30)
     team2_combo.grid(row=2, column=1, padx=10, pady=5)
 
-    predict_button = tk.Button(root, text="Get Winner", command=get_prediction)
-    predict_button.grid(row=3, column=0, columnspan=2, pady=10)
+    # Create a new frame to hold the buttons
+    button_frame = tk.Frame(root)
+    button_frame.grid(row=3, column=0, columnspan=2, pady=10)
+
+    predict_button = tk.Button(button_frame, text="Get Winner", command=get_prediction, width=15)
+    predict_button.pack(side="left", padx=10)
+
+    reset_button = tk.Button(button_frame, text="Reset Teams", command=reset_teams, width=15)
+    reset_button.pack(side="left", padx=10)
+
 
     result_label = tk.Label(root, text="", font=("Helvetica", 12), justify="center")
     result_label.grid(row=4, column=0, columnspan=2, pady=10)
