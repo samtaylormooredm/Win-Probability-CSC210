@@ -1,3 +1,5 @@
+# Used to get weights for the factors
+
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 
