@@ -2,13 +2,13 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import ttk, messagebox
 
 # === Load Data ===
 df = pd.read_csv("cleaned_win_prob_data.csv")
 df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
 
-# === Target Teams (Only these matter for prediction) ===
+# === Target Teams ===
 TARGET_TEAMS = {
     'Arizona', 'Bethune-Cookman', 'Bowling Green', 'Charleston Southern',
     'Charlotte', 'Davidson', 'Dayton', 'Detroit Mercy', 'Duquesne',
@@ -73,85 +73,90 @@ def compute_advanced_stats(past_games):
     }
     return stats
 
-def build_training_data(all_data, season="2024-2025"):
-    X = []
-    y = []
-
-    all_data = all_data.dropna(subset=['Date', 'Rslt', 'Team', 'Opp'])
-
-    for idx, game in all_data.iterrows():
-        team1 = game['Team']
-        team2 = game['Opp']
-        game_season = game['Season']
-        actual_result = game['Rslt']
-
-        if team1 not in TARGET_TEAMS or team2 not in TARGET_TEAMS:
-            continue
-
-        if game_season != season:
-            continue
-
-        try:
-            team1_games = get_pre_matchup_games(team1, team2, season, all_data)
-            team2_games = get_pre_matchup_games(team2, team1, season, all_data)
-
-            if team1_games.empty or team2_games.empty:
-                continue
-
-            team1_stats = compute_advanced_stats(team1_games)
-            team2_stats = compute_advanced_stats(team2_games)
-
-            features = [
-                team1_stats['Net_eFG%'] - team2_stats['Net_eFG%'],
-                (team1_stats['Net_TOV%'] - team2_stats['Net_TOV%']),
-                team1_stats['Net_FT%'] - team2_stats['Net_FT%'],
-                team1_stats['Net_ORB%'] - team2_stats['Net_ORB%'],
-                team1_stats['Steal%'] - team2_stats['Steal%'],
-                team1_stats['Block%'] - team2_stats['Block%']
-            ]
-
-            X.append(features)
-
-            y.append(1 if actual_result == 'W' else 0)
-
-        except Exception as e:
-            continue
-
-    return np.array(X), np.array(y)
-
-# Custom weights
-weights = {
-    'Net_eFG%': 0.4151,
-    'Net_TOV%': 0.4330,
-    'Net_ORB%': 0.0380,
-    'Net_FT%': 0.1107,
-    'Steal%': 0.0003,
-    'Block%': 0.0029
-}
-
 def predict_game_winner(team1, team2, season, all_data):
     team1_games = get_pre_matchup_games(team1, team2, season, all_data)
     team2_games = get_pre_matchup_games(team2, team1, season, all_data)
 
+    if team1_games.empty or team2_games.empty:
+        raise ValueError("Not enough game data for one or both teams.")
+
     team1_stats = compute_advanced_stats(team1_games)
     team2_stats = compute_advanced_stats(team2_games)
 
-    features = np.array([[
-        team1_stats['Net_eFG%'] - team2_stats['Net_eFG%'],
-        team1_stats['Net_TOV%'] - team2_stats['Net_TOV%'],
-        team1_stats['Net_FT%'] - team2_stats['Net_FT%'],
-        team1_stats['Net_ORB%'] - team2_stats['Net_ORB%'],
-        team1_stats['Steal%'] - team2_stats['Steal%'],
-        team1_stats['Block%'] - team2_stats['Block%']
-    ]])
+    weights = {
+        'Net_TOV%': 0.43,
+        'Net_eFG%': 0.41,
+        'Net_FT%': 0.11,
+        'Net_ORB%': 0.04,
+        'Block%': 0.005,
+        'Steal%': 0.005
+    }
 
-    weighted_sum = sum(features[0][i] * list(weights.values())[i] for i in range(len(weights)))
-    win_prob = 1 / (1 + np.exp(-weighted_sum))  # Sigmoid function for probability
-    winner = team1 if win_prob > 0.5 else team2
+    prob_team1 = sum(weights[stat] * team1_stats[stat] for stat in weights)
+    prob_team2 = sum(weights[stat] * team2_stats[stat] for stat in weights)
 
-    return winner, round(win_prob, 3)
+    if pd.isna(prob_team1) or pd.isna(prob_team2):
+        raise ValueError("One or more computed probabilities resulted in NaN.")
 
-# === Model Testing ===
+    prob_team1 = max(prob_team1, 0)
+    prob_team2 = max(prob_team2, 0)
+    total = prob_team1 + prob_team2
+    team1_win_prob = prob_team1 / total if total > 0 else 0.5
+
+    winner = team1 if team1_win_prob > 0.5 else team2
+    prob = round(team1_win_prob, 3) if winner == team1 else round(1 - team1_win_prob, 3)
+
+    return winner, prob
+
+# === GUI ===
+# === GUI ===
+def run_gui():
+    def get_prediction():
+        team1 = team1_combo.get().strip()
+        team2 = team2_combo.get().strip()
+
+        if not team1 or not team2:
+            messagebox.showerror("Input Error", "Please select both teams.")
+            return
+
+        try:
+            winner, prob = predict_game_winner(team1, team2, "2024-2025", df)
+            result_label.config(text=f"Predicted Winner: {winner}\nWin Probability: {prob*100:.1f}%")
+        except Exception as e:
+            messagebox.showerror("Prediction Error", str(e))
+
+    def reset_teams():
+        team1_combo.set("")
+        team2_combo.set("")
+        result_label.config(text="")
+
+    root = tk.Tk()
+    root.title("Basketball Game Predictor")
+
+    tk.Label(root, text="Select Team 1:").grid(row=0, column=0, padx=10, pady=5, sticky="e")
+    tk.Label(root, text="Select Team 2:").grid(row=1, column=0, padx=10, pady=5, sticky="e")
+
+    team1_combo = ttk.Combobox(root, values=TEAM_LIST, width=30, state="readonly")  # <-- added state="readonly"
+    team1_combo.grid(row=0, column=1, padx=10, pady=5)
+    team2_combo = ttk.Combobox(root, values=TEAM_LIST, width=30, state="readonly")  # <-- added state="readonly"
+    team2_combo.grid(row=1, column=1, padx=10, pady=5)
+
+    button_frame = tk.Frame(root)
+    button_frame.grid(row=2, column=0, columnspan=2, pady=10)
+
+    predict_button = tk.Button(button_frame, text="Predict Winner", command=get_prediction, width=15)
+    predict_button.pack(side="left", padx=10)
+
+    reset_button = tk.Button(button_frame, text="Reset", command=reset_teams, width=15)
+    reset_button.pack(side="left", padx=10)
+
+    result_label = tk.Label(root, text="", font=("Helvetica", 12), justify="center")
+    result_label.grid(row=3, column=0, columnspan=2, pady=10)
+
+    root.mainloop()
+
+
+# === Accuracy Testing ===
 def test_model_accuracy(all_data, season="2024-2025"):
     correct = 0
     total = 0
@@ -178,21 +183,18 @@ def test_model_accuracy(all_data, season="2024-2025"):
             if winner == actual_winner:
                 correct += 1
             total += 1
-
         except Exception as e:
             failed += 1
             continue
 
     if total > 0:
-        print(f"Accuracy: {correct}/{total} = {correct / total:.2%}")
+        print(f"\nAccuracy: {correct}/{total} = {correct / total:.2%}")
     else:
-        print("No games could be tested.")
+        print("\nNo games could be tested.")
     print(f"Failed predictions: {failed}")
 
 # === Main Execution ===
 if __name__ == "__main__":
-    print("Building training data...")
-    X, y = build_training_data(df, season="2024-2025")
-
-    print("\nTesting model accuracy...")
+    print("Testing model accuracy...")
     test_model_accuracy(df, season="2024-2025")
+    run_gui()
