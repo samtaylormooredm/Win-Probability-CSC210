@@ -134,5 +134,5 @@ combined_df = combined_df[final_columns]
 
 # === Save the cleaned file ===
 os.makedirs("outputs", exist_ok=True)
-combined_df.to_csv("outputs/cleaned_win_prob_data.csv", index=False)
+combined_df.to_csv("cleaned_win_prob_data.csv", index=False)
 print("\nCleaned data saved as 'outputs/cleaned_win_prob_data.csv'")

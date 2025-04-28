@@ -25,7 +25,6 @@ def batch_convert_excels(root_dir="."):
     print(f"Found {len(excel_files)} Excel file(s).")
 
     for file_path in excel_files:
-        print(f"Found file: {file_path}")  # Add this line
 
         file_name = os.path.basename(file_path).replace(".xlsx", "").replace(".xls", "")
         
