@@ -181,7 +181,6 @@ def test_model_accuracy(all_data, season="2024-2025"):
         print(f"\nAccuracy: {correct}/{total} = {correct / total:.2%}")
     else:
         print("\nNo games could be tested.")
-    print(f"Failed predictions: {failed}")
 
 # === Main Execution ===
 if __name__ == "__main__":
