@@ -99,12 +99,15 @@ def train_four_factors_plus_steals_blocks_regression(all_data):
     model = LinearRegression()
     model.fit(X, y)
 
-    # Output results
-    print("\n=== Regression Coefficients ===")
-    for feature, coef in zip(X.columns, model.coef_):
+    # Output results (Normalized Coefficients)
+    coefficients = model.coef_
+    normalized_coefficients = coefficients / coefficients.sum()
+
+    print("\n=== Normalized Regression Coefficients (Sum to 1) ===")
+    for feature, coef in zip(X.columns, normalized_coefficients):
         print(f"{feature}: {coef:.4f}")
 
-    print(f"\nIntercept: {model.intercept_:.4f}")
+    print(f"\nIntercept (not normalized): {model.intercept_:.4f}")
     print(f"R-squared (model fit): {model.score(X, y):.4f}")
     
     return model
