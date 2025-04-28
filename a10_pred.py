@@ -8,20 +8,27 @@ from tkinter import ttk, messagebox
 df = pd.read_csv("cleaned_win_prob_data.csv")
 df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
 
-# === Target Teams ===
-TARGET_TEAMS = {
-    'Arizona', 'Bethune-Cookman', 'Bowling Green', 'Charleston Southern',
-    'Charlotte', 'Davidson', 'Dayton', 'Detroit Mercy', 'Duquesne',
-    'East Tennessee State', 'Eastern Michigan', 'Fordham', 'George Mason',
-    'George Washington', 'Gonzaga', 'La Salle', 'Loyola Chicago',
-    'Massachusetts', 'Providence', 'Rhode Island', 'Richmond',
-    "Saint Joseph's", 'Saint Louis', 'St. Bonaventure', 'Temple',
-    'VCU', 'VMI'
+# === A-10 Teams Only ===
+A10_TEAMS = {
+    'Davidson', 'Dayton', 'Duquesne', 'Fordham', 'George Mason',
+    'George Washington', 'La Salle', 'Loyola Chicago', 'Massachusetts',
+    'Rhode Island', 'Richmond', "Saint Joseph's", 'Saint Louis',
+    'St. Bonaventure', 'VCU'
+}
+
+# === Define Weights Globally ===
+WEIGHTS = {
+    'Net_TOV%': 0.43,
+    'Net_eFG%': 0.41,
+    'Net_FT%': 0.11,
+    'Net_ORB%': 0.04,
+    'Block%': 0.005,
+    'Steal%': 0.005
 }
 
 def extract_team_list(data):
     teams = sorted(set(data['Team'].dropna().unique()))
-    return [team for team in teams if team in TARGET_TEAMS]
+    return [team for team in teams if team in A10_TEAMS]
 
 TEAM_LIST = extract_team_list(df)
 
@@ -75,17 +82,9 @@ def predict_game_winner(team1, team2, season, all_data):
     team1_stats = compute_advanced_stats(team1_games)
     team2_stats = compute_advanced_stats(team2_games)
 
-    weights = {
-        'Net_TOV%': 0.43,
-        'Net_eFG%': 0.41,
-        'Net_FT%': 0.11,
-        'Net_ORB%': 0.04,
-        'Block%': 0.005,
-        'Steal%': 0.005
-    }
 
-    prob_team1 = sum(weights[stat] * team1_stats[stat] for stat in weights)
-    prob_team2 = sum(weights[stat] * team2_stats[stat] for stat in weights)
+    prob_team1 = sum(WEIGHTS[stat] * team1_stats[stat] for stat in WEIGHTS)
+    prob_team2 = sum(WEIGHTS[stat] * team2_stats[stat] for stat in WEIGHTS)
 
     if pd.isna(prob_team1) or pd.isna(prob_team2):
         raise ValueError("One or more computed probabilities resulted in NaN.")
@@ -100,7 +99,6 @@ def predict_game_winner(team1, team2, season, all_data):
 
     return winner, prob
 
-# === GUI ===
 # === GUI ===
 def run_gui():
     def get_prediction():
@@ -123,14 +121,14 @@ def run_gui():
         result_label.config(text="")
 
     root = tk.Tk()
-    root.title("Basketball Game Predictor")
+    root.title("A-10 Basketball Game Predictor")
 
     tk.Label(root, text="Select Team 1:").grid(row=0, column=0, padx=10, pady=5, sticky="e")
     tk.Label(root, text="Select Team 2:").grid(row=1, column=0, padx=10, pady=5, sticky="e")
 
-    team1_combo = ttk.Combobox(root, values=TEAM_LIST, width=30, state="readonly")  # <-- added state="readonly"
+    team1_combo = ttk.Combobox(root, values=TEAM_LIST, width=30, state="readonly")
     team1_combo.grid(row=0, column=1, padx=10, pady=5)
-    team2_combo = ttk.Combobox(root, values=TEAM_LIST, width=30, state="readonly")  # <-- added state="readonly"
+    team2_combo = ttk.Combobox(root, values=TEAM_LIST, width=30, state="readonly")
     team2_combo.grid(row=1, column=1, padx=10, pady=5)
 
     button_frame = tk.Frame(root)
@@ -147,7 +145,6 @@ def run_gui():
 
     root.mainloop()
 
-
 # === Accuracy Testing ===
 def test_model_accuracy(all_data, season="2024-2025"):
     correct = 0
@@ -162,7 +159,8 @@ def test_model_accuracy(all_data, season="2024-2025"):
         game_season = game['Season']
         actual_result = game['Rslt']
 
-        if team1 not in TARGET_TEAMS or team2 not in TARGET_TEAMS:
+        # Only consider games where both teams are in the A-10
+        if team1 not in A10_TEAMS or team2 not in A10_TEAMS:
             continue
 
         if game_season != season:
@@ -187,6 +185,6 @@ def test_model_accuracy(all_data, season="2024-2025"):
 
 # === Main Execution ===
 if __name__ == "__main__":
-    print("Testing model accuracy...")
-    test_model_accuracy(df, season="2023-2024")
+    print("Testing model accuracy (A-10 teams only)...")
+    test_model_accuracy(df, season="2024-2025")
     run_gui()
