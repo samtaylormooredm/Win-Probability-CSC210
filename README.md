@@ -7,7 +7,7 @@ Using historical and current-season data, the model computes pre-game win probab
 
 
 ## Final Project Paper
-[Final Project Paper](./Final_Paper.pdf)
+[Final Project Paper](./Final_Paper1.pdf)
 
 
 ## Features
